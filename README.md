@@ -21,3 +21,39 @@ I will also try to explain how the code works in the best of my ability:
 find . hello -exec echo hi
 ```
 Should do the search and also print hi
+
+## Sandbox Command
+
+So the second part is to make a sandbox that will execute based on the mask and if its SYS_open value is 1 it will and if it is 0 it will not execute, lets explai nthe code slowly
+
+Initially we check if it has less than 3 arguments we fail, and we always want the second argument to be "-", we use atoi(Ascii to Integer) in order to convert the second argument into an integer, then we call interpose(will be explained shortly after), then we take the path which will be executed for example "cat" or "echo" and then we execute then using exec which is execv in linux. 
+
+So what does interpose do?
+Well it is a syscall that i had to customly make, it was this:
+```
+uint64 sys_interpose(void){
+  int mask;
+  argint(0, &mask);
+  myproc()->mask = mask;
+  return myproc()->mask;
+}
+```
+From argint we take the first number as input and then put it inside a variable in the process, and then return the value
+
+So inside the syscall we will use the value and use right shifting to check each time if it can be done and if it can't then we fail
+```
+struct proc *p = myproc();
+  num = p->trapframe->a7;
+  int fail = p->mask & ( 1 << num);
+
+  //something
+
+  if (!fail){
+    do syscall
+  }else{
+    don't do
+  }
+
+```
+This took a long while because i was stuck on how to get the integer from the interpose in main to the sys_interpose but it turned out simpler than expected
+
